@@ -5,11 +5,13 @@
 #include "ReactRootView.g.cpp"
 #include "DynamicWriter.h"
 #include "ReactNativeHost.h"
+#include <UI.Xaml.Media.Media3D.h>
 
 namespace winrt::Microsoft::ReactNative::implementation {
 
 ReactRootView::ReactRootView() noexcept {
   m_rootControl = std::make_shared<react::uwp::ReactRootControl>(*this);
+  UpdatePerspective();
   Loaded([this](auto &&, auto &&) { react::uwp::SetCompositor(react::uwp::GetCompositor(*this)); });
 }
 
@@ -62,6 +64,22 @@ void ReactRootView::ReloadView() noexcept {
     }
   } else {
     m_rootControl->ReactViewHost(nullptr);
+  }
+}
+
+void ReactRootView::UpdatePerspective() {
+  // Xaml's default projection in 3D is orthographic (all lines are parallel)
+  // However React Native's default projection is a one-point perspective.
+  // Set a default perspective projection on the main control to mimic this.
+  auto grid = m_rootControl->GetXamlView().as<xaml::Controls::Grid>();
+
+  if (m_isPerspectiveEnabled) {
+    auto perspectiveTransform3D = xaml::Media::Media3D::PerspectiveTransform3D();
+    perspectiveTransform3D.Depth(850);
+    xaml::Media::Media3D::Transform3D t3d(perspectiveTransform3D);
+    grid.Transform3D(t3d);
+  } else {
+    grid.ClearValue(xaml::UIElement::Transform3DProperty());
   }
 }
 
